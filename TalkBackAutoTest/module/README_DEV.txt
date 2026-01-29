@@ -3,18 +3,72 @@ TỔNG QUAN
 Module này cung cấp giao diện dòng lệnh để tự động hóa các thao tác trên PC Windows:
 - Bật/Tắt Windows Narrator (trình đọc màn hình hỗ trợ khả năng tiếp cận)
 - Gửi phím Tab để điều hướng giao diện
+- Lấy thông tin phần tử UI đang được focus (mới)
 
 YÊU CẦU HỆ THỐNG
 ----------------
 - Hệ điều hành Windows (đã kiểm tra trên Windows 10/11)
 - Python 3.x đã cài đặt và thêm vào PATH
-- Không cần cài đặt gói pip (chỉ dùng thư viện chuẩn)
+- Thư viện uiautomation (cho chức năng lấy thông tin element):
+    pip install uiautomation
 
 
 CÁCH SỬ DỤNG DÒNG LỆNH
 -----------------------
 
-1. BẬT/TẮT NARRATOR
+1. LẤY THÔNG TIN PHẦN TỬ ĐANG FOCUS (MỚI)
+   Lệnh:
+     python pc_automation.py get_focused
+   
+   Mô tả:
+     Lấy thông tin về phần tử UI đang được focus hiện tại sử dụng 
+     Microsoft UI Automation API thông qua thư viện uiautomation.
+   
+   Đầu ra (stdout):
+     JSON object với các thuộc tính:
+     - Name: Tên/label của element
+     - LocalizedControlType: Loại control (button, edit, checkbox, v.v.)
+     - BoundingRect: Toạ độ màn hình [left, top, right, bottom]
+     - Value: Nội dung text (chỉ cho Edit, Document, ComboBox)
+     - ToggleState: Trạng thái 'On'/'Off' (chỉ cho CheckBox, RadioButton)
+     - ExpandCollapseState: 'Collapsed'/'Expanded' (chỉ cho ComboBox)
+   
+   Ví dụ output:
+     {"Name": "Search", "LocalizedControlType": "edit", 
+      "BoundingRect": [100, 200, 300, 250], "Value": "test", 
+      "ToggleState": null, "ExpandCollapseState": null}
+   
+   Các loại control được hỗ trợ:
+     - EditControl: Name, BoundingRect, Value
+     - DocumentControl: Name, BoundingRect, Value
+     - CheckBoxControl: Name, BoundingRect, ToggleState
+     - RadioButtonControl: Name, BoundingRect, ToggleState
+     - ComboBoxControl: Name, BoundingRect, Value, ExpandCollapseState
+     - Control khác: Name, BoundingRect, LocalizedControlType (base properties)
+   
+   Xử lý lỗi:
+     - Không có element focus: stdout = "null", stderr = thông báo lỗi
+     - Pattern không hỗ trợ: thuộc tính = null
+     - Control type không rõ: stderr = INFO, chỉ trả về base properties
+   
+   Mã thoát:
+     0 = Thành công (có element)
+     1 = Không có element focus hoặc lỗi
+
+   Sử dụng từ C#:
+     var psi = new ProcessStartInfo {
+         FileName = "python.exe",
+         Arguments = "module/pc_automation.py get_focused",
+         RedirectStandardOutput = true,
+         RedirectStandardError = true
+     };
+     var process = Process.Start(psi);
+     string json = process.StandardOutput.ReadToEnd();
+     string errors = process.StandardError.ReadToEnd();
+     var info = JsonConvert.DeserializeObject<ElementInfo>(json);
+
+
+2. BẬT/TẮT NARRATOR
    Lệnh:
      python pc_automation.py narrator
    
@@ -27,7 +81,7 @@ CÁCH SỬ DỤNG DÒNG LỆNH
      1 = Thất bại
 
 
-2. NHẤN PHÍM TAB (Đơn lẻ)
+3. NHẤN PHÍM TAB (Đơn lẻ)
    Lệnh:
      python pc_automation.py tab
    
