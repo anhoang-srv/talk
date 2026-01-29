@@ -26,6 +26,7 @@ VK_TAB = 0x09           # Tab key
 VK_RETURN = 0x0D        # Enter key
 VK_CONTROL = 0x11       # Ctrl key
 VK_LWIN = 0x5B          # Left Windows key
+VK_ESCAPE = 0x1B        # Escape key
 
 # Key event flags
 KEYEVENTF_KEYUP = 0x0002
@@ -87,39 +88,38 @@ def toggle_narrator():
         return False
 
 
-def press_tab(times=1):
+def press_tab():
     """
-    Press Tab key multiple times for UI navigation
-  
+    Press Tab key one time for UI navigation
+    Call this function multiple times to press Tab multiple times
     """
-    delay_before = 2 # Delay before pressing Tab
     try:
-        if times < 1:
-            print("ERROR: times parameter must be >= 1")
-            return False
+        # Press Tab
+        send_key_event(VK_TAB, is_key_up=False)
         
-        print(f"Pressing Tab {times} time(s)...")
-        time.sleep(delay_before)  # Delay before starting to press Tab
+        time.sleep(0.05)  # Short delay while key is held
         
-        for i in range(times):
-            # Press Tab
-            if send_key_event(VK_TAB, is_key_up=False) == 0:
-                raise Exception(f"Failed to press Tab at iteration {i+1}")
-            
-            time.sleep(0.05)  # Short delay while key is held
-            
-            # Release Tab
-            if send_key_event(VK_TAB, is_key_up=True) == 0:
-                raise Exception(f"Failed to release Tab at iteration {i+1}")
-            
-            # Delay between Tab presses
-            time.sleep(0.2)
+        # Release Tab
+        send_key_event(VK_TAB, is_key_up=True) 
         
-        print(f"OK: Tab pressed {times} time(s)")
+        time.sleep(0.2)  # Delay after Tab press
         return True
         
     except Exception as e:
         print(f"ERROR: press_tab failed - {str(e)}", file=sys.stderr)
+        return False
+
+
+def is_escape_pressed():
+    """
+    Returns True if ESC is pressed
+    """
+    try:
+        # GetAsyncKeyState returns non-zero if key is pressed
+        # 0x8000 bit indicates key is currently down
+        state = ctypes.windll.user32.GetAsyncKeyState(VK_ESCAPE)
+        return (state & 0x8000) != 0
+    except:
         return False
 
 def main():
@@ -138,20 +138,22 @@ def main():
         sys.exit(0 if success else 1)
         
     elif action == "tab":
-        # Parse optional count parameter
-        times = 1
-        if len(sys.argv) > 2:
-            try:
-                times = int(sys.argv[2])
-                if times < 1:
-                    print("ERROR: Tab count must be >= 1", file=sys.stderr)
-                    sys.exit(1)
-            except ValueError:
-                print(f"ERROR: Invalid tab count '{sys.argv[2]}' - must be integer", file=sys.stderr)
-                sys.exit(1)
+        print("Press ESC to stop")
+        time.sleep(2)  # Delay before starting
         
-        success = press_tab(times)
-        sys.exit(0 if success else 1)
+        count = 0
+        while True:
+            # Check if ESC key is pressed
+            if is_escape_pressed():
+                break           
+            # Press Tab
+            if not press_tab():
+                print(f"ERROR: Failed at iteration {count + 1}", file=sys.stderr)
+                sys.exit(1)
+            count += 1
+        
+        print(f"OK: Tab pressed {count} time(s)")
+        sys.exit(0)
         
     else:
         print(f"Unknown action")
