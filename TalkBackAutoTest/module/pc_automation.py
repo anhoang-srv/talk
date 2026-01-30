@@ -112,11 +112,11 @@ CONTROL_PATTERNS = {
     50004: ['Value'],                          # EditControl
     50030: ['Value'],                          # DocumentControl
     50002: ['ToggleState'],                    # CheckBoxControl
-    50003: ['IsSelected'],                     # RadioButtonControl (FIXED: was ToggleState)
+    50013: ['IsSelected'],                     # RadioButtonControl 
     50000: ['ToggleState'],                    # ButtonControl (toggle variant)
-    50006: ['Value', 'ExpandCollapseState'],   # ComboBoxControl
+    50003: ['Value', 'ExpandCollapseState'],   # ComboBoxControl
     50007: ['IsSelected', 'ToggleState', 'ExpandCollapseState'],  # ListItemControl
-    50025: ['ExpandCollapseState'],            # TreeItemControl
+    50024: ['ExpandCollapseState'],            # TreeItemControl
 }
 
 # Map pattern names to handler functions
@@ -238,15 +238,12 @@ def toggle_narrator():
     """
     try:
         # Press keys in sequence: Ctrl -> Win -> Enter
-        if send_key_event(VK_CONTROL, is_key_up=False) == 0:
-            raise Exception("Failed to press Ctrl")
-        
-        if send_key_event(VK_LWIN, is_key_up=False) == 0:
-            raise Exception("Failed to press Win")
-        
-        if send_key_event(VK_RETURN, is_key_up=False) == 0:
-            raise Exception("Failed to press Enter")
-        
+        send_key_event(VK_CONTROL, is_key_up=False)
+            
+        send_key_event(VK_LWIN, is_key_up=False) 
+            
+        send_key_event(VK_RETURN, is_key_up=False) 
+            
         # Hold for system to recognize key combination
         time.sleep(0.1)
         
@@ -255,7 +252,7 @@ def toggle_narrator():
         send_key_event(VK_LWIN, is_key_up=True)
         send_key_event(VK_CONTROL, is_key_up=True)
         
-        print("OK: toggled ")
+        print("toggled ")
         return True
         
     except Exception as e:
@@ -277,7 +274,7 @@ def press_tab():
         # Release Tab
         send_key_event(VK_TAB, is_key_up=True) 
         
-        time.sleep(0.2)  # Delay after Tab press
+        time.sleep(0.3)  # Delay after Tab press
         return True
         
     except Exception as e:
@@ -290,20 +287,13 @@ def is_escape_pressed():
     Returns True if ESC is pressed
     """
     try:
-        # GetAsyncKeyState returns non-zero if key is pressed
-        # 0x8000 bit indicates key is currently down
+    
         state = ctypes.windll.user32.GetAsyncKeyState(VK_ESCAPE)
-        return (state & 0x8000) != 0
+    
+        return (state & 0x8000) != 0 or (state & 0x0001) != 0
     except:
         return False
 
-    """Print usage information for the CLI"""
-    print("Usage: python pc_automation.py <command>", file=sys.stderr)
-    print("", file=sys.stderr)
-    print("Commands:", file=sys.stderr)
-    print("  get_focused    - Get information about the currently focused UI element (JSON)", file=sys.stderr)
-    print("  narrator       - Toggle Windows Narrator on/off", file=sys.stderr)
-    print("  tab            - Press Tab key repeatedly (press ESC to stop)", file=sys.stderr)
 
 def main():
    
@@ -327,7 +317,7 @@ def main():
         
     elif action == "tab":
         print("Press ESC to stop", file=sys.stderr)
-        time.sleep(2)  # Delay before starting
+        time.sleep(1)  # Delay before starting
         
         count = 0
         while True:

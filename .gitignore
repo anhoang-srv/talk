@@ -61,6 +61,6 @@ nunit-*.xml
 .vscode
 .claude
 .github
-
+.venv
 .cline
 .clinerules
