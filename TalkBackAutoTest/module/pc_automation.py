@@ -46,14 +46,11 @@ KEYEVENTF_KEYUP = 0x0002
 TOGGLE_STATE_NAMES = {
     0: 'Off',
     1: 'On',
-    2: 'Indeterminate'
 }
 
 EXPAND_COLLAPSE_STATE_NAMES = {
     0: 'Collapsed',
     1: 'Expanded',
-    2: 'PartiallyExpanded',
-    3: 'LeafNode'
 }
 
 # --- Pattern Handler Functions (Private) ---
@@ -65,7 +62,7 @@ def _extract_value_pattern(element):
             pattern = element.GetValuePattern()
             return pattern.Value
     except Exception as e:
-        print(f"WARNING: Value pattern extraction failed: {e}", file=sys.stderr)
+        print(f"Value pattern extraction failed: {e}", file=sys.stderr)
         return None
     return None
 
@@ -78,7 +75,7 @@ def _extract_toggle_pattern(element):
             state = pattern.ToggleState
             return TOGGLE_STATE_NAMES.get(state, str(state))
     except Exception as e:
-        print(f"WARNING: Toggle pattern extraction failed: {e}", file=sys.stderr)
+        print(f"Toggle pattern extraction failed: {e}", file=sys.stderr)
         return None
     return None
 
@@ -91,7 +88,7 @@ def _extract_expand_collapse_pattern(element):
             state = pattern.ExpandCollapseState
             return EXPAND_COLLAPSE_STATE_NAMES.get(state, str(state))
     except Exception as e:
-        print(f"WARNING: ExpandCollapse pattern extraction failed: {e}", file=sys.stderr)
+        print(f"ExpandCollapse pattern extraction failed: {e}", file=sys.stderr)
         return None
     return None
 
@@ -103,7 +100,7 @@ def _extract_selection_item_pattern(element):
             pattern = element.GetSelectionItemPattern()
             return 'selected' if pattern.IsSelected else 'non-selected'
     except Exception as e:
-        print(f"WARNING: SelectionItem pattern extraction failed: {e}", file=sys.stderr)
+        print(f"SelectionItem pattern extraction failed: {e}", file=sys.stderr)
         return None
     return None
 
@@ -277,6 +274,38 @@ def is_escape_pressed():
     return (state & 0x8000) != 0 or (state & 0x0001) != 0
 
 
+def run_tab_sequence():
+    """
+    Executes the tab navigation sequence.
+    """
+    print("Press ESC to stop", file=sys.stderr)
+    time.sleep(1)  # Delay before starting
+    
+    count = 0
+    while True:
+        # Check if ESC key is pressed
+        if is_escape_pressed():
+            break           
+        # Press Tab
+        if not press_tab():
+            print(f"ERROR: Failed at iteration {count + 1}", file=sys.stderr)
+            return False
+        count += 1
+        
+        # Get focused element info after Tab
+        element_info = get_focused_element_info()
+        if element_info:
+            print(json.dumps(element_info, ensure_ascii=False))
+        else:
+            print(json.dumps(None))
+        
+        # Ensure output is sent immediately
+        sys.stdout.flush()
+    
+    print(f"Tab pressed {count} time(s)", file=sys.stderr)
+    return True
+
+
 def main():
    
     # Check if action argument provided
@@ -298,37 +327,5 @@ def main():
         sys.exit(0 if success else 1)
         
     elif action == "tab":
-        print("Press ESC to stop", file=sys.stderr)
-        time.sleep(1)  # Delay before starting
-        
-        count = 0
-        while True:
-            # Check if ESC key is pressed
-            if is_escape_pressed():
-                break           
-            # Press Tab
-            if not press_tab():
-                print(f"ERROR: Failed at iteration {count + 1}", file=sys.stderr)
-                sys.exit(1)
-            count += 1
-            
-            # Get focused element info after Tab
-            element_info = get_focused_element_info()
-            if element_info:
-                print(json.dumps(element_info, ensure_ascii=False))
-            else:
-                print("null")
-        
-        print(f"Tab pressed {count} time(s)", file=sys.stderr)
-        sys.exit(0)
-        
-    else:
-        print(f"Unknown action")
-        
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-    
-    input()
+        success = run_tab_sequence()
+        sys.exit(0 if success else 1)
