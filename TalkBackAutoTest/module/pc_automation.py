@@ -213,22 +213,18 @@ def send_key_event(vk_code, is_key_up=False):
     Send keyboard event using Windows SendInput API
 
     """
-    try:
-        # Create INPUT structure
-        inputs = INPUT()
-        inputs.type = 1  # INPUT_KEYBOARD
-        inputs.ki.wVk = vk_code
-        inputs.ki.wScan = 0
-        inputs.ki.dwFlags = KEYEVENTF_KEYUP if is_key_up else 0
-        inputs.ki.time = 0
-        inputs.ki.dwExtraInfo = None
+    # Create INPUT structure
+    inputs = INPUT()
+    inputs.type = 1  # INPUT_KEYBOARD
+    inputs.ki.wVk = vk_code
+    inputs.ki.wScan = 0
+    inputs.ki.dwFlags = KEYEVENTF_KEYUP if is_key_up else 0
+    inputs.ki.time = 0
+    inputs.ki.dwExtraInfo = None
         
-        # Call SendInput
-        result = ctypes.windll.user32.SendInput(1, ctypes.byref(inputs), ctypes.sizeof(inputs))
-        return result
-    except Exception as e:
-        print(f"ERROR: send_key_event failed - {str(e)}", file=sys.stderr)
-        return 0
+    # Call SendInput
+    result = ctypes.windll.user32.SendInput(1, ctypes.byref(inputs), ctypes.sizeof(inputs))
+    return result
 
 
 def toggle_narrator():
@@ -236,63 +232,49 @@ def toggle_narrator():
     Toggle Windows Narrator ON/OFF using Ctrl + Win + Enter shortcut
 
     """
-    try:
-        # Press keys in sequence: Ctrl -> Win -> Enter
-        send_key_event(VK_CONTROL, is_key_up=False)
+    # Press keys in sequence: Ctrl -> Win -> Enter
+    send_key_event(VK_CONTROL, is_key_up=False)
             
-        send_key_event(VK_LWIN, is_key_up=False) 
+    send_key_event(VK_LWIN, is_key_up=False) 
             
-        send_key_event(VK_RETURN, is_key_up=False) 
+    send_key_event(VK_RETURN, is_key_up=False) 
             
-        # Hold for system to recognize key combination
-        time.sleep(0.1)
+    # Hold for system to recognize key combination
+    time.sleep(0.1)
         
-        # Release keys in reverse order: Enter -> Win -> Ctrl
-        send_key_event(VK_RETURN, is_key_up=True)
-        send_key_event(VK_LWIN, is_key_up=True)
-        send_key_event(VK_CONTROL, is_key_up=True)
+    # Release keys in reverse order: Enter -> Win -> Ctrl
+    send_key_event(VK_RETURN, is_key_up=True)
+    send_key_event(VK_LWIN, is_key_up=True)
+    send_key_event(VK_CONTROL, is_key_up=True)
         
-        print("toggled ")
-        return True
+    print("toggled ")
+    return True
         
-    except Exception as e:
-        print(f"toggle failed - {str(e)}", file=sys.stderr)
-        return False
-
-
 def press_tab():
     """
     Press Tab key one time for UI navigation
     Call this function multiple times to press Tab multiple times
     """
-    try:
-        # Press Tab
-        send_key_event(VK_TAB, is_key_up=False)
+
+    # Press Tab
+    send_key_event(VK_TAB, is_key_up=False)
         
-        time.sleep(0.05)  # Short delay while key is held
+    time.sleep(0.05)  # Short delay while key is held
         
-        # Release Tab
-        send_key_event(VK_TAB, is_key_up=True) 
+    # Release Tab
+    send_key_event(VK_TAB, is_key_up=True) 
         
-        time.sleep(0.3)  # Delay after Tab press
-        return True
-        
-    except Exception as e:
-        print(f"ERROR: press_tab failed - {str(e)}", file=sys.stderr)
-        return False
+    time.sleep(0.3)  # Delay after Tab press
+    return True
 
 
 def is_escape_pressed():
     """
     Returns True if ESC is pressed
     """
-    try:
+    state = ctypes.windll.user32.GetAsyncKeyState(VK_ESCAPE)
     
-        state = ctypes.windll.user32.GetAsyncKeyState(VK_ESCAPE)
-    
-        return (state & 0x8000) != 0 or (state & 0x0001) != 0
-    except:
-        return False
+    return (state & 0x8000) != 0 or (state & 0x0001) != 0
 
 
 def main():
