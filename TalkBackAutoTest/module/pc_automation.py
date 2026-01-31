@@ -132,7 +132,7 @@ def get_focused_element_info():
             Only includes fields that have values (no None fields).
             - Always: Name, LocalizedControlType
             - If set: Position, Value, ToggleState, ExpandCollapseState, IsSelected
-        None: If no element focused or uiautomation unavailable.
+        None: If no element focused
     """
     if auto is None:
         print("ERROR: uiautomation library not available", file=sys.stderr)

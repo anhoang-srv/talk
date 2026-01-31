@@ -113,25 +113,6 @@ CÁCH SỬ DỤNG DÒNG LỆNH
      Cách dừng thủ công:
      - Nhấn ESC bất kỳ lúc nào để dừng loop ngay lập tức
    
-   Đầu ra:
-     STDOUT: Một dòng JSON cho mỗi element unique (tương tự output của get_focused)
-     STDERR: Log messages về tiến trình và kết quả
-       - "Press ESC to stop" - khi bắt đầu
-       - "CYCLE DETECTED at element #N. Stopping." - khi phát hiện vòng lặp
-       - "Total unique elements: N" - tổng số element unique đã gặp
-       - "Tab pressed N time(s)" - tổng số lần nhấn Tab
-       - "Unique elements visited: N" - số element unique đã visit
-       - "WARNING: Focus lost" - nếu focus bị mất giữa chừng
-       - "WARNING: No RuntimeId for element #N" - nếu không lấy được RuntimeId
-   
-   Ví dụ output:
-     STDERR: Press ESC to stop
-     STDOUT: {"Name": "OK", "LocalizedControlType": "button"}
-     STDOUT: {"Name": "Cancel", "LocalizedControlType": "button"}
-     STDOUT: {"Name": "Search", "LocalizedControlType": "edit", "Value": ""}
-     STDERR: Total unique elements: 3
-     STDERR: Tab pressed 4 time(s)
-     STDERR: Unique elements visited: 3
    
    Xử lý lỗi:
      - RuntimeId không có: Skip cycle check cho element đó, tiếp tục loop
