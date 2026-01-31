@@ -3,13 +3,10 @@ import time
 import ctypes
 from ctypes import wintypes
 import json
+import uiautomation as auto
+from uiautomation import ControlType, PatternId, PropertyId
 
-# UI Automation imports
-try:
-    import uiautomation as auto
-    from uiautomation import ControlType, PatternId
-except ImportError:
-    auto = None  # Graceful degradation
+
 
 class KEYBDINPUT(ctypes.Structure):
     """Keyboard input structure for SendInput"""
@@ -104,6 +101,21 @@ def _extract_selection_item_pattern(element):
         return None
     return None
 
+
+def _extract_position_in_set(element):
+    """Extract PositionInSet and SizeOfSet properties.
+    
+    Returns dict { 'Index': pos, 'Total': size } if both values > 0.
+    Returns None if properties are not set (value = 0).
+    """
+    pos = element.GetPropertyValue(PropertyId.PositionInSetProperty)
+    size = element.GetPropertyValue(PropertyId.SizeOfSetProperty)
+    
+    if pos > 0 and size > 0:
+        return {'Index': pos, 'Total': size}
+    return None
+
+
 # --- Control Type to Pattern Mapping ---
 CONTROL_PATTERNS = {
     50004: ['Value'],                          # EditControl
@@ -129,71 +141,53 @@ PATTERN_HANDLERS = {
 def get_focused_element_info():
     """
     Get information about currently focused UI element.
-    
-    Returns dict with base properties + control-specific patterns:
-    - Always: Name, LocalizedControlType
-    - Type-specific: Value, ToggleState, ExpandCollapseState, IsSelected (depends on control)
-    
-    Supported control types:
-    - EditControl, DocumentControl: Value
-    - CheckBoxControl: ToggleState
-    - RadioButtonControl: IsSelected
-    - ButtonControl (toggle variant): ToggleState
-    - ComboBoxControl: Value + ExpandCollapseState
-    - ListItemControl: IsSelected + ToggleState + ExpandCollapseState (tries all)
-    - TreeItemControl: ExpandCollapseState
-    
-    Returns None if no element is focused or uiautomation not available.
-    Prints errors to stderr if pattern extraction fails.
+
     """
     if auto is None:
         print("ERROR: uiautomation library not available", file=sys.stderr)
         return None
     
-    try:
-        # Get currently focused element
-        element = auto.GetFocusedControl()
-        
-        if element is None:
-            print("ERROR: No focused element found", file=sys.stderr)
-            return None
-        
-        # Extract base properties (always available)
-        result = {
-            'Name': element.Name or '',
-            'LocalizedControlType': element.LocalizedControlType or '',
-        }
-        
-        # Get control type ID
-        control_type_id = element.ControlType
-        
-        # Look up patterns for this control type
-        pattern_names = CONTROL_PATTERNS.get(control_type_id, [])
-        
-        if not pattern_names:
-            # Unknown control type - log info and return base properties only
-            print(f"Unknown control type {control_type_id}", 
-                  file=sys.stderr)
-        
-        # Initialize all pattern properties to None
-        result['Value'] = None
-        result['ToggleState'] = None
-        result['ExpandCollapseState'] = None
-        result['IsSelected'] = None
-        
-        # Extract patterns for this control type
-        for pattern_name in pattern_names:
-            handler = PATTERN_HANDLERS.get(pattern_name)
-            if handler:
-                result[pattern_name] = handler(element)
-        
-        return result
-        
-    except Exception as e:
-        print(f"ERROR: Failed to get focused element info: {e}", file=sys.stderr)
+    # Get currently focused element
+    element = auto.GetFocusedControl()
+    
+    if element is None:
+        print("ERROR: No focused element found", file=sys.stderr)
         return None
-
-# CORE FUNCTIONS
+        
+    # Extract base properties (always available)
+    result = {
+        'Name': element.Name or '',
+        'LocalizedControlType': element.LocalizedControlType or '',
+        # 'IsEnabled': element.IsEnabled,
+        # 'ItemStatus': element.ItemStatus or None,
+        'Position': _extract_position_in_set(element),
+    }
+        
+    # Get control type ID
+    control_type_id = element.ControlType
+        
+    # Look up patterns for this control type
+    pattern_names = CONTROL_PATTERNS.get(control_type_id, [])
+        
+    if not pattern_names:
+        # Unknown control type
+        print(f"Unknown control type {control_type_id}", 
+              file=sys.stderr)
+        
+    # Initialize all pattern properties to None
+    result['Value'] = None
+    result['ToggleState'] = None
+    result['ExpandCollapseState'] = None
+    result['IsSelected'] = None
+        
+    # Extract patterns for this control type
+    for pattern_name in pattern_names:
+        handler = PATTERN_HANDLERS.get(pattern_name)
+        if handler:
+            result[pattern_name] = handler(element)
+        
+    return result
+        
 
 def send_key_event(vk_code, is_key_up=False):
     """
@@ -240,7 +234,6 @@ def toggle_narrator():
 def press_tab():
     """
     Press Tab key one time for UI navigation
-    Call this function multiple times to press Tab multiple times
     """
 
     # Press Tab
@@ -294,7 +287,6 @@ def run_tab_sequence():
         runtime_id = element.GetRuntimeId()
         
         if runtime_id in seen_runtime_ids:
-            print(f"CYCLE DETECTED at element #{count}", file=sys.stderr)
             print(f"Total unique elements: {len(seen_runtime_ids)}", file=sys.stderr)
             break
         seen_runtime_ids.add(runtime_id)
