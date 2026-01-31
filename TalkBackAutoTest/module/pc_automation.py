@@ -50,55 +50,41 @@ EXPAND_COLLAPSE_STATE_NAMES = {
     1: 'Expanded',
 }
 
-# --- Pattern Handler Functions (Private) ---
+# --- Pattern Handler Functions  ---
 
 def _extract_value_pattern(element):
     """Extract Value from ValuePattern. Returns string or None."""
-    try:
-        if element.GetPattern(PatternId.ValuePattern):
-            pattern = element.GetValuePattern()
-            return pattern.Value
-    except Exception as e:
-        print(f"Value pattern extraction failed: {e}", file=sys.stderr)
-        return None
+    if element.GetPattern(PatternId.ValuePattern):
+        pattern = element.GetValuePattern()
+        return pattern.Value
     return None
 
 
 def _extract_toggle_pattern(element):
     """Extract ToggleState from TogglePattern. Returns 'On'/'Off'/etc or None."""
-    try:
-        if element.GetPattern(PatternId.TogglePattern):
+    if element.GetPattern(PatternId.TogglePattern):
             pattern = element.GetTogglePattern()
             state = pattern.ToggleState
             return TOGGLE_STATE_NAMES.get(state, str(state))
-    except Exception as e:
-        print(f"Toggle pattern extraction failed: {e}", file=sys.stderr)
-        return None
+
     return None
 
 
 def _extract_expand_collapse_pattern(element):
     """Extract ExpandCollapseState. Returns 'Collapsed'/'Expanded'/etc or None."""
-    try:
-        if element.GetPattern(PatternId.ExpandCollapsePattern):
+    if element.GetPattern(PatternId.ExpandCollapsePattern):
             pattern = element.GetExpandCollapsePattern()
             state = pattern.ExpandCollapseState
             return EXPAND_COLLAPSE_STATE_NAMES.get(state, str(state))
-    except Exception as e:
-        print(f"ExpandCollapse pattern extraction failed: {e}", file=sys.stderr)
-        return None
     return None
+
 
 
 def _extract_selection_item_pattern(element):
     """Extract IsSelected from SelectionItemPattern. Returns 'selected'/'non-selected' or None."""
-    try:
-        if element.GetPattern(PatternId.SelectionItemPattern):
+    if element.GetPattern(PatternId.SelectionItemPattern):
             pattern = element.GetSelectionItemPattern()
             return 'selected' if pattern.IsSelected else 'non-selected'
-    except Exception as e:
-        print(f"SelectionItem pattern extraction failed: {e}", file=sys.stderr)
-        return None
     return None
 
 
@@ -141,51 +127,44 @@ PATTERN_HANDLERS = {
 def get_focused_element_info():
     """
     Get information about currently focused UI element.
-
+    
+    dict: Element info with base properties and control-specific patterns.
+            Only includes fields that have values (no None fields).
+            - Always: Name, LocalizedControlType
+            - If set: Position, Value, ToggleState, ExpandCollapseState, IsSelected
+        None: If no element focused or uiautomation unavailable.
     """
     if auto is None:
         print("ERROR: uiautomation library not available", file=sys.stderr)
         return None
     
-    # Get currently focused element
     element = auto.GetFocusedControl()
-    
     if element is None:
         print("ERROR: No focused element found", file=sys.stderr)
         return None
-        
-    # Extract base properties (always available)
+    
+    # Base properties 
     result = {
         'Name': element.Name or '',
         'LocalizedControlType': element.LocalizedControlType or '',
-        # 'IsEnabled': element.IsEnabled,
-        # 'ItemStatus': element.ItemStatus or None,
-        'Position': _extract_position_in_set(element),
     }
-        
-    # Get control type ID
+    
+    # Position (only if set)
+    position = _extract_position_in_set(element)
+    if position:
+        result['Position'] = position
+    
+    # Extract patterns for this control type (only include if not None)
     control_type_id = element.ControlType
-        
-    # Look up patterns for this control type
     pattern_names = CONTROL_PATTERNS.get(control_type_id, [])
-        
-    if not pattern_names:
-        # Unknown control type
-        print(f"Unknown control type {control_type_id}", 
-              file=sys.stderr)
-        
-    # Initialize all pattern properties to None
-    result['Value'] = None
-    result['ToggleState'] = None
-    result['ExpandCollapseState'] = None
-    result['IsSelected'] = None
-        
-    # Extract patterns for this control type
+    
     for pattern_name in pattern_names:
         handler = PATTERN_HANDLERS.get(pattern_name)
         if handler:
-            result[pattern_name] = handler(element)
-        
+            value = handler(element)
+            if value is not None:
+                result[pattern_name] = value
+    
     return result
         
 

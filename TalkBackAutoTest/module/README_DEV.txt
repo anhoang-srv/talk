@@ -26,25 +26,40 @@ CÁCH SỬ DỤNG DÒNG LỆNH
    
    Đầu ra (stdout):
      JSON object với các thuộc tính:
-     - Name: Tên/label của element
-     - LocalizedControlType: Loại control (button, edit, checkbox, v.v.)
-     - BoundingRect: Toạ độ màn hình [left, top, right, bottom]
-     - Value: Nội dung text (chỉ cho Edit, Document, ComboBox)
-     - ToggleState: Trạng thái 'On'/'Off' (chỉ cho CheckBox, RadioButton)
-     - ExpandCollapseState: 'Collapsed'/'Expanded' (chỉ cho ComboBox)
+     - Name: Tên/label của element (luôn có)
+     - LocalizedControlType: Loại control (luôn có)
+     - Position: { Index, Total } - vị trí trong set (chỉ khi có)
+     - Value: Nội dung text (chỉ khi có - Edit, Document, ComboBox)
+     - ToggleState: 'On'/'Off' (chỉ khi có - CheckBox, toggle Button)
+     - ExpandCollapseState: 'Collapsed'/'Expanded' (chỉ khi có - ComboBox, TreeItem)
+     - IsSelected: 'selected'/'non-selected' (chỉ khi có - RadioButton, ListItem)
+     
+     LƯU Ý: JSON output chỉ chứa các trường có giá trị thực sự.
+            Không có trường null - giảm kích thước payload và dễ parse hơn.
    
    Ví dụ output:
-     {"Name": "Search", "LocalizedControlType": "edit", 
-      "BoundingRect": [100, 200, 300, 250], "Value": "test", 
-      "ToggleState": null, "ExpandCollapseState": null}
+     Minimal (control không có pattern đặc biệt):
+       {"Name": "OK", "LocalizedControlType": "button"}
+     
+     Với pattern data:
+       {"Name": "Search", "LocalizedControlType": "edit", "Value": "test"}
+     
+     Với Position (ListItem):
+       {"Name": "Item 3", "LocalizedControlType": "list item", 
+        "Position": {"Index": 3, "Total": 10}, "IsSelected": "selected"}
    
    Các loại control được hỗ trợ:
-     - EditControl: Name, BoundingRect, Value
-     - DocumentControl: Name, BoundingRect, Value
-     - CheckBoxControl: Name, BoundingRect, ToggleState
-     - RadioButtonControl: Name, BoundingRect, ToggleState
-     - ComboBoxControl: Name, BoundingRect, Value, ExpandCollapseState
-     - Control khác: Name, BoundingRect, LocalizedControlType (base properties)
+     - EditControl (50004): Name + Value
+     - DocumentControl (50030): Name + Value
+     - CheckBoxControl (50002): Name + ToggleState
+     - RadioButtonControl (50013): Name + IsSelected
+     - ButtonControl (50000): Name + ToggleState (cho toggle buttons)
+     - ComboBoxControl (50003): Name + Value + ExpandCollapseState
+     - ListItemControl (50007): Name + IsSelected + ToggleState + ExpandCollapseState
+     - TreeItemControl (50024): Name + ExpandCollapseState
+     - Control khác: Name + LocalizedControlType (base properties only)
+     
+     Tất cả controls có thể có Position { Index, Total } nếu thuộc 1 set.
    
    Xử lý lỗi:
      - Không có element focus: stdout = "null", stderr = thông báo lỗi
@@ -111,10 +126,9 @@ CÁCH SỬ DỤNG DÒNG LỆNH
    
    Ví dụ output:
      STDERR: Press ESC to stop
-     STDOUT: {"Name": "OK", "LocalizedControlType": "button", "Value": null, ...}
-     STDOUT: {"Name": "Cancel", "LocalizedControlType": "button", "Value": null, ...}
-     STDOUT: {"Name": "Search", "LocalizedControlType": "edit", "Value": "", ...}
-     STDERR: CYCLE DETECTED at element #4. Stopping.
+     STDOUT: {"Name": "OK", "LocalizedControlType": "button"}
+     STDOUT: {"Name": "Cancel", "LocalizedControlType": "button"}
+     STDOUT: {"Name": "Search", "LocalizedControlType": "edit", "Value": ""}
      STDERR: Total unique elements: 3
      STDERR: Tab pressed 4 time(s)
      STDERR: Unique elements visited: 3
