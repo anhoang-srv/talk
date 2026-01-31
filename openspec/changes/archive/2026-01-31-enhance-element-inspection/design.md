@@ -35,17 +35,29 @@ The `pc_automation.py` module currently supports basic patterns (Value, Toggle, 
 
 ### Decision 2: JSON Structure
 
-**Format:**
+**Format (Option B - Only Include Set Values):**
 ```json
 {
-  "Name": "...",
-  "LocalizedControlType": "...",
-  "IsEnabled": true,
-  "ItemStatus": "...",
-  "Position": { "Index": 1, "Total": 5 }
+  "Name": "Item 3",
+  "LocalizedControlType": "list item",
+  "Position": { "Index": 3, "Total": 10 },
+  "IsSelected": "selected"
 }
 ```
-**Rationale:** Base properties are extracted directly from element. Fields are nullable/omitted if data is missing.
+
+**Minimal output (no patterns):**
+```json
+{
+  "Name": "OK",
+  "LocalizedControlType": "button"
+}
+```
+
+**Rationale:** 
+- JSON chỉ chứa fields có giá trị thực sự (không có null fields)
+- Giảm kích thước payload qua stdout
+- Dễ mở rộng: thêm pattern mới chỉ cần update `PATTERN_HANDLERS`
+- Clean code: không cần hardcode `result['NewPattern'] = None`
 
 ## Risks / Trade-offs
 

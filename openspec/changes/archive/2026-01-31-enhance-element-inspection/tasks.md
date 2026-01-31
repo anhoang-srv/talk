@@ -38,5 +38,16 @@ The following are explicitly deferred to future tasks:
 - **IsEnabled extraction** (code commented out - needs review)
 - **ItemStatus extraction** (code commented out - needs review)
 - Pattern-based extraction: RangeValuePattern, GridItemPattern, TableItemPattern, LegacyIAccessiblePattern
-- JSON structure decision (nested vs flat)
 - Automated testing strategy with Narrator comparison
+
+## 5. Refactoring (Completed Post-Archive)
+
+- [x] 5.1 Refactor `get_focused_element_info` to Option B (Only Include Set Values):
+  - JSON output chỉ chứa fields có giá trị thực sự (không còn null fields)
+  - Xóa hardcoded pattern initialization (`result['Value'] = None`, etc.)
+  - Dynamic pattern extraction từ `PATTERN_HANDLERS` keys
+  - Giảm code từ 51 lines xuống 38 lines (-25%)
+- [x] 5.2 Update README_DEV.txt với JSON format mới:
+  - Documented new minimal output format
+  - Updated ví dụ output (không còn `"Value": null`)
+  - Updated control type mappings với Control Type IDs
