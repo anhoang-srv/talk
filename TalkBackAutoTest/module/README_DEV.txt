@@ -81,49 +81,78 @@ CÁCH SỬ DỤNG DÒNG LỆNH
      1 = Thất bại
 
 
-3. NHẤN PHÍM TAB (Đơn lẻ)
+3. NHẤN PHÍM TAB VÀ QUÉT UI ELEMENTS (Tự động với Cycle Detection)
    Lệnh:
      python pc_automation.py tab
    
    Mô tả:
-     Gửi một lần nhấn phím Tab để di chuyển focus sang phần tử UI tiếp theo.
+     Tự động nhấn phím Tab liên tục để duyệt qua tất cả các phần tử UI trong window hiện tại.
+     Sau mỗi lần Tab, lấy thông tin element đang focus và xuất dưới dạng JSON.
+     
+     Tính năng Cycle Detection:
+     - Tự động dừng khi phát hiện vòng lặp Tab quay lại element đã gặp
+     - Sử dụng RuntimeId để track các element unique
+     - Mỗi element chỉ xuất hiện 1 lần trong output
+     - Không cần chỉ định số lần Tab, script tự động dừng đúng lúc
+     
+     Cách dừng thủ công:
+     - Nhấn ESC bất kỳ lúc nào để dừng loop ngay lập tức
+   
+   Đầu ra:
+     STDOUT: Một dòng JSON cho mỗi element unique (tương tự output của get_focused)
+     STDERR: Log messages về tiến trình và kết quả
+       - "Press ESC to stop" - khi bắt đầu
+       - "CYCLE DETECTED at element #N. Stopping." - khi phát hiện vòng lặp
+       - "Total unique elements: N" - tổng số element unique đã gặp
+       - "Tab pressed N time(s)" - tổng số lần nhấn Tab
+       - "Unique elements visited: N" - số element unique đã visit
+       - "WARNING: Focus lost" - nếu focus bị mất giữa chừng
+       - "WARNING: No RuntimeId for element #N" - nếu không lấy được RuntimeId
+   
+   Ví dụ output:
+     STDERR: Press ESC to stop
+     STDOUT: {"Name": "OK", "LocalizedControlType": "button", "Value": null, ...}
+     STDOUT: {"Name": "Cancel", "LocalizedControlType": "button", "Value": null, ...}
+     STDOUT: {"Name": "Search", "LocalizedControlType": "edit", "Value": "", ...}
+     STDERR: CYCLE DETECTED at element #4. Stopping.
+     STDERR: Total unique elements: 3
+     STDERR: Tab pressed 4 time(s)
+     STDERR: Unique elements visited: 3
+   
+   Xử lý lỗi:
+     - RuntimeId không có: Skip cycle check cho element đó, tiếp tục loop
+     - Focus lost: Dừng loop, log warning
+     - ESC pressed: Dừng ngay lập tức
    
    Mã thoát:
-     0 = Thành công
-     1 = Thất bại
-
-
-3. NHẤN PHÍM TAB (Nhiều lần)
-   Lệnh:
-     python pc_automation.py tab <số_lần>
-   
-   Ví dụ:
-     python pc_automation.py tab 5
-   
-   Mô tả:
-     Gửi phím Tab <số_lần> lần với độ trễ phù hợp.
-     Hữu ích để điều hướng qua nhiều phần tử UI.
-   
-   Mã thoát:
-     0 = Thành công
-     1 = Thất bại
+     0 = Thành công (cycle detected hoặc ESC pressed)
+     1 = Thất bại (lỗi kỹ thuật)
 
 
 ĐỊNH DẠNG OUTPUT
 -----------------
-Script in ra STDOUT theo định dạng:
+Script in ra STDOUT và STDERR riêng biệt:
 
-  ACTION: [mô tả hành động]
-  SUCCESS: [thông báo xác nhận]
+STDOUT:
+  - JSON data của UI elements (một object JSON mỗi dòng)
+  - Dùng cho C# parsing và processing
 
-Khi có lỗi, in ra STDERR:
-  ERROR: [thông báo lỗi]
+STDERR:
+  - Status messages: "Press ESC to stop", "CYCLE DETECTED", v.v.
+  - Warning messages: "WARNING: Focus lost", "WARNING: No RuntimeId"
+  - Statistics: "Tab pressed N time(s)", "Unique elements visited: N"
+  - Error messages: "ERROR: [thông báo lỗi]"
+  
+Lưu ý: 
+  - STDERR dùng cho logging/debug, không parse trong C#
+  - STDOUT chỉ chứa JSON data thuần túy
 
 
 HƯỚNG DẪN TÍCH HỢP C#
 ----------------------
 Sử dụng Pattern RunCommand (Đã có sẵn trong MainForm.cs)
 
+1. BẬT/TẮT NARRATOR:
     private void ToggleNarratorPC()
     {
         string modulePath = Path.GetDirectoryName(Application.ExecutablePath) 
@@ -140,6 +169,55 @@ Sử dụng Pattern RunCommand (Đã có sẵn trong MainForm.cs)
             printLog("Không thể bật/tắt Narrator: " + output, "error");
         }
     }
+
+2. TỰ ĐỘNG QUÉT UI ELEMENTS VỚI TAB (Cycle Detection):
+    private List<ElementInfo> ScanUIElements()
+    {
+        string modulePath = Path.GetDirectoryName(Application.ExecutablePath) 
+                          + "\\module\\pc_automation.py";
+        
+        var psi = new ProcessStartInfo {
+            FileName = "python.exe",
+            Arguments = "\"" + modulePath + "\" tab",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        
+        var process = Process.Start(psi);
+        var elements = new List<ElementInfo>();
+        
+        // Đọc JSON từ stdout (mỗi dòng là 1 element)
+        string line;
+        while ((line = process.StandardOutput.ReadLine()) != null)
+        {
+            var element = JsonConvert.DeserializeObject<ElementInfo>(line);
+            if (element != null)
+            {
+                elements.Add(element);
+            }
+        }
+        
+        // Đọc stderr để log (optional)
+        string stderr = process.StandardError.ReadToEnd();
+        if (!string.IsNullOrEmpty(stderr))
+        {
+            printLog("Tab scan info: " + stderr, "info");
+        }
+        
+        process.WaitForExit();
+        
+        printLog($"Scanned {elements.Count} unique UI elements", "success");
+        return elements;
+    }
+
+    Lưu ý:
+    - Script tự động dừng khi phát hiện cycle, không cần timeout
+    - Mỗi element chỉ xuất hiện 1 lần trong output
+    - User có thể nhấn ESC để dừng sớm
+    - Parse stderr nếu cần thông tin debug (cycle detected, warnings, v.v.)
+
 
 
 DANH SÁCH KIỂM TRA TRIỂN KHAI

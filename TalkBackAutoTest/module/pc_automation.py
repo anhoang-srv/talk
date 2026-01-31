@@ -164,16 +164,6 @@ def get_focused_element_info():
             'LocalizedControlType': element.LocalizedControlType or '',
         }
         
-        # Extract BoundingRect as list (commented out - not needed)
-        # try:
-        #     rect = element.BoundingRectangle
-        #     if rect:
-        #         result['BoundingRect'] = [rect.left, rect.top, rect.right, rect.bottom]
-        #     else:
-        #         result['BoundingRect'] = None
-        # except:
-        #     result['BoundingRect'] = None
-        
         # Get control type ID
         control_type_id = element.ControlType
         
@@ -182,7 +172,7 @@ def get_focused_element_info():
         
         if not pattern_names:
             # Unknown control type - log info and return base properties only
-            print(f"INFO: Unknown control type {control_type_id}, returning base properties only", 
+            print(f"Unknown control type {control_type_id}", 
                   file=sys.stderr)
         
         # Initialize all pattern properties to None
@@ -276,33 +266,49 @@ def is_escape_pressed():
 
 def run_tab_sequence():
     """
-    Executes the tab navigation sequence.
+    Executes the tab navigation sequence with automatic cycle detection.
+    Uses RuntimeId to detect when Tab loop returns to a previously-visited element.
     """
     print("Press ESC to stop", file=sys.stderr)
-    time.sleep(1)  # Delay before starting
+    time.sleep(1)
     
     count = 0
+    seen_runtime_ids = set()
+    
     while True:
-        # Check if ESC key is pressed
         if is_escape_pressed():
-            break           
-        # Press Tab
+            print("Stopped by user", file=sys.stderr)
+            break
+        
         if not press_tab():
-            print(f"ERROR: Failed at iteration {count + 1}", file=sys.stderr)
+            print(f"Failed at iteration {count + 1}", file=sys.stderr)
             return False
         count += 1
         
-        # Get focused element info after Tab
+        element = auto.GetFocusedControl()
+        if element is None:
+            print("Focus lost", file=sys.stderr)
+            break
+        
+        # Get RuntimeId 
+        runtime_id = element.GetRuntimeId()
+        
+        if runtime_id in seen_runtime_ids:
+            print(f"CYCLE DETECTED at element #{count}", file=sys.stderr)
+            print(f"Total unique elements: {len(seen_runtime_ids)}", file=sys.stderr)
+            break
+        seen_runtime_ids.add(runtime_id)
+        
         element_info = get_focused_element_info()
         if element_info:
             print(json.dumps(element_info, ensure_ascii=False))
         else:
             print(json.dumps(None))
         
-        # Ensure output is sent immediately
-        sys.stdout.flush()
+    sys.stdout.flush()
     
     print(f"Tab pressed {count} time(s)", file=sys.stderr)
+    print(f"Unique elements visited: {len(seen_runtime_ids)}", file=sys.stderr)
     return True
 
 
@@ -311,7 +317,6 @@ def main():
     # Check if action argument provided
     if len(sys.argv) < 2:
         print("ERROR: Missing action argument", file=sys.stderr)
-
         sys.exit(1)
     
     action = sys.argv[1].lower()
@@ -329,3 +334,8 @@ def main():
     elif action == "tab":
         success = run_tab_sequence()
         sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()
+    input()
